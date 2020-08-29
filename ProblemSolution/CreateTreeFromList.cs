@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace ProblemSolution
 {
@@ -8,20 +9,27 @@ namespace ProblemSolution
         public static IList<Node> Execute(IEnumerable<Node> flatStructure)
         {
             var root = new List<Node>();
+            var args = (0, false);
+
             foreach (var node in flatStructure.OrderBy(n => n.ParentId))
                 if (node.ParentId is null)
                     root.Add(node);
                 else
-                    AddChildToRootParents(node, root);
+                {
+                    args.Item2 = false;
+                    AddChildToRootParents(node, root, ref args);
+                }
 
             return root;
         }
 
-        private static void AddChildToRootParents(Node child, IEnumerable<Node> rootNodes)
+        private static void AddChildToRootParents(Node child, IEnumerable<Node> rootNodes, ref (int executionCounter, bool cancelationToken) recursionArgs)
         {
+            recursionArgs.executionCounter ++;
+
             if (rootNodes is null) return;
 
-            foreach (var node in rootNodes)
+                foreach (var node in rootNodes)
                 if (child.ParentId == node.Id)
                 {
                     if (node.Children is null)
@@ -35,11 +43,12 @@ namespace ProblemSolution
                         node.Children = children;
                     }
 
-                    return;
+                    recursionArgs.cancelationToken = true;
+                    return ;
                 }
-                else
+                else if (!recursionArgs.cancelationToken)
                 {
-                    AddChildToRootParents(child, node.Children);
+                    AddChildToRootParents(child, node.Children, ref recursionArgs);
                 }
         }
     }
